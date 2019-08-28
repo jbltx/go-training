@@ -2,7 +2,9 @@
 
 ### Leetcode submissions
 
-[78 - Subsets](https://leetcode.com/problems/subsets/) - [code](/78-Subsets/subsets.go)
+* [78 - Subsets](https://leetcode.com/problems/subsets/) - [code](/78-Subsets/subsets.go)
+
+* [190 - Reverse Bits](https://leetcode.com/problems/reverse-bits/) - [code](/190-ReverseBits/reverse-bits.go)
 
 ### Others Samples
 
