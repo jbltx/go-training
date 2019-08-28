@@ -2,7 +2,7 @@
 
 ### Leetcode submissions
 
-[78 - Subsets](https://leetcode.com/problems/subsets/) - [code](/jbltx/go-training/tree/master/78-Subsets/subsets.go)
+[78 - Subsets](https://leetcode.com/problems/subsets/) - [code](/78-Subsets/subsets.go)
 
 ### Others Samples
 
