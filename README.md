@@ -1,6 +1,10 @@
 # Go Training
 
-### Samples
+### Leetcode submissions
+
+[78 - Subsets](https://leetcode.com/problems/subsets/) - [code](/jbltx/go-training/tree/master/78-Subsets/subsets.go)
+
+### Others Samples
 
 #### Sastantua
 
@@ -10,7 +14,7 @@ The goal of this program is to build the Sastantua pyramid using a given size as
 go run ./sastantua 1 3
 ```
 
-##### Output
+**Output**
 
 ```bash
 Size 1
