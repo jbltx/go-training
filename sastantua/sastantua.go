@@ -98,8 +98,10 @@ func sastantua(size int) {
 }
 
 func main() {
+
     flag.Parse()
-    for _,arg := range flag.Args() {
+    args := flag.Args()
+    for _,arg := range args {
         if size,err := strconv.Atoi(arg); err != nil {
             fmt.Printf("***Argument \"%s\" Invalid***\n", arg)
         } else {
