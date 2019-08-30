@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
+	"fmt"
 	"net/http"
+	"os"
 )
 
 type TypeRef struct {
@@ -67,6 +70,9 @@ type IntrospectionResponse struct {
 	Data struct {
 		Schema *Schema `json:"__schema"`
 	} `json:"data"`
+}
+
+type GraphQLSchema struct {
 }
 
 const (
@@ -171,9 +177,15 @@ fragment TypeRef on __Type {
 }
 	  
 `
+
+	INTROSPECTION_FAILED_CODE = 1
+	STATS_FAILED_CODE         = 2
+	SCHEMA_GEN_FAILED_CODE    = 3
+	CLIENT_GEN_FAILED_CODE    = 4
+	NO_ENDPOINT_CODE          = 5
 )
 
-func getIntrospectionResponse() (*IntrospectionResponse, error) {
+func getIntrospectionResponse(endpoint string) (*IntrospectionResponse, error) {
 	var requestBody bytes.Buffer
 
 	requestBodyObj := struct {
@@ -188,7 +200,7 @@ func getIntrospectionResponse() (*IntrospectionResponse, error) {
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", "https://leetcode.com/graphql", &requestBody)
+	req, err := http.NewRequest("POST", endpoint, &requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -216,14 +228,80 @@ func getIntrospectionResponse() (*IntrospectionResponse, error) {
 	return &resBody, nil
 }
 
+func showStatistics(s Schema) error {
+	// TODO : Show stats
+
+	return nil
+}
+
+func generateGQLSchema(s Schema, gql *GraphQLSchema) error {
+	// TODO : Generate GraphQL schema using introspection response
+
+	return nil
+}
+
+func generateGolangClient(s Schema, gql GraphQLSchema) error {
+	// TODO : Generate client using the schema
+
+	return nil
+}
+
 func main() {
 
-	_, err := getIntrospectionResponse()
+	var genClient bool
+	var genSchema bool
+	var showStats bool
+	var endpoint string
+	flag.BoolVar(&genClient, "client", false, "Generate client in Golang")
+	flag.BoolVar(&genSchema, "schema", false, "Generate GraphQL schema")
+	flag.BoolVar(&showStats, "stats", false, "Show statistics about the API")
+	flag.StringVar(&endpoint, "endpoint", "https://leetcode.com/graphql", "The GraphQL API endpoint")
+	flag.Parse()
 
-	if err != nil {
-		panic(err)
+	if !showStats && !genSchema && !genClient {
+		fmt.Println("Nothing to do, please provide one of the available options flags")
+		os.Exit(0)
 	}
 
-	// TODO : Generate GraphQL schema using introspection response
-	// TODO : Generate client using the schema
+	if endpoint == "" {
+		fmt.Println("Please provide a valid endpoint in the command-line")
+		os.Exit(NO_ENDPOINT_CODE)
+	}
+
+	fmt.Println("Introspecting...")
+
+	introspection, err := getIntrospectionResponse(endpoint)
+
+	if err != nil {
+		fmt.Printf("Introspection of the API has failed : %v", err)
+		os.Exit(INTROSPECTION_FAILED_CODE)
+	}
+
+	if showStats {
+		err = showStatistics(*introspection.Data.Schema)
+		if err != nil {
+			fmt.Printf("Statistics dislay has failed : %v", err)
+			os.Exit(STATS_FAILED_CODE)
+		}
+	}
+
+	var gqlSchema GraphQLSchema
+
+	if genSchema || genClient {
+		err = generateGQLSchema(*introspection.Data.Schema, &gqlSchema)
+		if err != nil {
+			fmt.Printf("GraphQL schema generation has failed : %v", err)
+			os.Exit(SCHEMA_GEN_FAILED_CODE)
+		}
+	}
+
+	if genClient {
+		generateGolangClient(*introspection.Data.Schema, gqlSchema)
+		if err != nil {
+			fmt.Printf("Golang client generation has failed : %v", err)
+			os.Exit(CLIENT_GEN_FAILED_CODE)
+		}
+	}
+
+	os.Exit(0)
 }
