@@ -10,6 +10,30 @@ import (
 	"os"
 )
 
+// GraphQLObjectType ...
+type GraphQLObjectType struct {
+	Name string `json:"name"`
+}
+
+// GraphQLNamedType ...
+type GraphQLNamedType interface {
+}
+
+// GraphQLSchemaSettings ...
+type GraphQLSchemaSettings struct {
+	Query        *GraphQLObjectType
+	Mutation     *GraphQLObjectType
+	Subscription *GraphQLObjectType
+	Types        []*GraphQLNamedType
+	Directives   []*Directive
+}
+
+// GraphQLScalarType ...
+type GraphQLScalarType struct {
+	Name        string
+	Description string
+}
+
 type TypeRef struct {
 	Name   string   `json:"name"`
 	Kind   string   `json:"kind"`
@@ -53,21 +77,15 @@ type Directive struct {
 }
 
 type Schema struct {
-	QueryType struct {
-		Name string `json:"name"`
-	} `json:"queryType"`
-	MutationType struct {
-		Name string `json:"name"`
-	} `json:"mutationType"`
-	SubscriptionType struct {
-		Name string `json:"name"`
-	} `json:"subscriptionType"`
-	Types      []*FullType  `json:"types"`
-	Directives []*Directive `json:"directives"`
+	QueryType        *GraphQLObjectType `json:"queryType"`
+	MutationType     *GraphQLObjectType `json:"mutationType"`
+	SubscriptionType *GraphQLObjectType `json:"subscriptionType"`
+	Types            []*FullType        `json:"types"`
+	Directives       []*Directive       `json:"directives"`
 }
 
 type IntrospectionResponse struct {
-	Data struct {
+	Data *struct {
 		Schema *Schema `json:"__schema"`
 	} `json:"data"`
 }
@@ -234,10 +252,74 @@ func showStatistics(s Schema) error {
 	return nil
 }
 
-func generateGQLSchema(s Schema, gql *GraphQLSchema) error {
+func buildType(t *FullType) interface{} {
+	return nil
+}
+
+func getObjectType(s interface{}) {
+
+}
+
+func buildDirective(d *Directive) {
+
+}
+
+func objectValues(map[string]interface{}) []*GraphQLNamedType {
+	return nil
+}
+
+func newGraphQLSchema(cfg *GraphQLSchemaSettings) *GraphQLSchema {
+	return nil
+}
+
+var specifiedScalarTypes []*GraphQLScalarType
+var introspectionTypes []*GraphQLScalarType
+
+func generateGQLSchema(schemaIntrospection Schema) *GraphQLSchema {
 	// TODO : Generate GraphQL schema using introspection response
 
-	return nil
+	typeMap := make(map[string]interface{})
+	for _, t := range schemaIntrospection.Types {
+		typeMap[t.Name] = buildType(t)
+	}
+
+	for _, t := range append(specifiedScalarTypes, introspectionTypes...) {
+		if _, ok := typeMap[t.Name]; ok {
+			typeMap[t.Name] = t
+		}
+	}
+
+	queryType := schemaIntrospection.QueryType
+	if queryType != nil {
+		getObjectType(schemaIntrospection.QueryType)
+	}
+
+	mutationType := schemaIntrospection.MutationType
+	if mutationType != nil {
+		getObjectType(schemaIntrospection.MutationType)
+	}
+
+	subscriptionType := schemaIntrospection.SubscriptionType
+	if subscriptionType != nil {
+		getObjectType(schemaIntrospection.SubscriptionType)
+	}
+
+	directives := schemaIntrospection.Directives
+	if directives != nil {
+		for _, d := range directives {
+			buildDirective(d)
+		}
+	} else {
+		directives = []*Directive{}
+	}
+
+	return newGraphQLSchema(&GraphQLSchemaSettings{
+		Query:        queryType,
+		Mutation:     mutationType,
+		Subscription: subscriptionType,
+		Types:        objectValues(typeMap),
+		Directives:   directives,
+	})
 }
 
 func generateGolangClient(s Schema, gql GraphQLSchema) error {
@@ -285,10 +367,10 @@ func main() {
 		}
 	}
 
-	var gqlSchema GraphQLSchema
+	var gqlSchema *GraphQLSchema
 
 	if genSchema || genClient {
-		err = generateGQLSchema(*introspection.Data.Schema, &gqlSchema)
+		gqlSchema = generateGQLSchema(*introspection.Data.Schema)
 		if err != nil {
 			fmt.Printf("GraphQL schema generation has failed : %v", err)
 			os.Exit(SCHEMA_GEN_FAILED_CODE)
@@ -296,7 +378,7 @@ func main() {
 	}
 
 	if genClient {
-		generateGolangClient(*introspection.Data.Schema, gqlSchema)
+		generateGolangClient(*introspection.Data.Schema, *gqlSchema)
 		if err != nil {
 			fmt.Printf("Golang client generation has failed : %v", err)
 			os.Exit(CLIENT_GEN_FAILED_CODE)
