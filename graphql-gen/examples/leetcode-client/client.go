@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -100,6 +101,41 @@ func (gql *GraphQLClient) Query(query string, vars map[string]interface{}) ([]by
 	return content, nil
 }
 
+// Get is the legacy HTTP GET query
+func (gql *GraphQLClient) Get(uri string, params map[string]string) ([]byte, error) {
+
+	if params != nil && len(params) > 0 {
+		pStr := "?"
+		for k, v := range params {
+			if len(pStr) > 1 {
+				pStr += "&"
+			}
+			pStr += fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v))
+		}
+
+		uri += pStr
+	}
+
+	fmt.Println("GET", uri)
+	res, err := gql.httpClient.Get(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, errors.New("Error Response Status : " + res.Status)
+	}
+
+	content, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
+}
+
 // SubmissionDumpNode ...
 type SubmissionDumpNode struct {
 	ID            string `json:"id"`
@@ -114,6 +150,22 @@ type SubmissionDumpNode struct {
 	Memory        string `json:"memory"`
 }
 
+// SubmissionDumpNodeLegacy ...
+type SubmissionDumpNodeLegacy struct {
+	ID            int    `json:"id"`
+	Title         string `json:"title"`
+	StatusDisplay string `json:"status_display"`
+	Lang          string `json:"lang"`
+	Runtime       string `json:"runtime"`
+	Time          string `json:"time"`
+	Timestamp     int    `json:"timestamp"`
+	URL           string `json:"url"`
+	IsPending     string `json:"is_pending"`
+	Memory        string `json:"memory"`
+	Code          string `json:"code"`
+	CompareResult string `json:"compare_result"`
+}
+
 // SubmissionStatusNode ...
 type SubmissionStatusNode struct {
 	ID   int    `json:"id"`
@@ -125,6 +177,12 @@ type SubmissionListNode struct {
 	LastKey     string                `json:"lastKey"`
 	HasNext     bool                  `json:"hasNext"`
 	Submissions []*SubmissionDumpNode `json:"submissions"`
+}
+
+type SubmissionListNodeLegacy struct {
+	LastKey     string                      `json:"last_key"`
+	HasNext     bool                        `json:"has_next"`
+	Submissions []*SubmissionDumpNodeLegacy `json:"submissions_dump"`
 }
 
 // ID ...

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
+	"time"
 
 	leetcode "github.com/jbltx/go-training/graphql-gen/examples/leetcode-client"
 )
@@ -92,31 +94,35 @@ func main() {
 	}
 
 	// get all submissions, and filter it by storing most recent ones in a hash map
-	filteredSubmissions := make(map[string]*leetcode.SubmissionDumpNode)
-	submissionsVars := make(map[string]interface{})
-	submissionsVars["offset"] = 0
-	submissionsVars["limit"] = 20
+	filteredSubmissions := make(map[string]*leetcode.SubmissionDumpNodeLegacy)
+	submissionsVars := make(map[string]string)
+	submissionsOffset := 0
+	submissionsLimit := 20
+	submissionsVars["offset"] = strconv.Itoa(submissionsOffset)
+	submissionsVars["limit"] = strconv.Itoa(submissionsLimit)
 	hasNext := true
 
 	for hasNext {
 
-		var sr SubmissionsListNodeResponse
-		content, err := gql.Query(submissionsQuery, submissionsVars)
+		var submissionList leetcode.SubmissionListNodeLegacy
+		time.Sleep(1 * time.Second) // little hack to not get banned
+		// For now I use the legacy API for submissions, because I didn't find a way to get the submitted
+		// code using the SubmissionDumpNode of GraphQL API... I suspect Leetcode to not using GraphQL that much :S
+		content, err := gql.Get("https://leetcode.com/api/submissions/", submissionsVars)
 		if err != nil {
 			panic(err)
 		}
 
-		if err = json.Unmarshal(content, &sr); err != nil {
+		if err = json.Unmarshal(content, &submissionList); err != nil {
 			panic(err)
 		}
 
-		submissionList := sr.Data.SubmissionList
-
-		if submissionList != nil && submissionList.Submissions != nil {
+		if submissionList.Submissions != nil {
 			for _, submission := range submissionList.Submissions {
-				if submission != nil {
+				if submission != nil && submission.Lang == "golang" {
 					if _, ok := filteredSubmissions[submission.Title]; !ok {
 
+						// create the directory for the submission
 						dirName := fmt.Sprintf("%s-%s", questionsMap[submission.Title].QuestionFrontendID, questionsMap[submission.Title].QuestionTitleSlug)
 						dirPath := path.Join(cwd, dirName)
 						info, err := os.Stat(dirPath)
@@ -124,13 +130,26 @@ func main() {
 							os.Mkdir(dirPath, 755)
 						}
 
+						// write submission code in a go file
+						codeFilepath := path.Join(dirPath, questionsMap[submission.Title].QuestionTitleSlug+".go")
+						f, err := os.Create(codeFilepath)
+						if err != nil {
+							panic(err)
+						}
+						f.WriteString(fmt.Sprintf("package main\n\n%s", submission.Code))
+						if err = f.Close(); err != nil {
+							panic(err)
+						}
+
+						// store the submission in the map
 						filteredSubmissions[submission.Title] = submission
 					}
 				}
 			}
 		}
 
-		submissionsVars["offset"] = submissionsVars["offset"].(int) + submissionsVars["limit"].(int)
+		submissionsOffset += submissionsLimit
+		submissionsVars["offset"] = strconv.Itoa(submissionsOffset)
 
 		hasNext = submissionList.HasNext
 	}
