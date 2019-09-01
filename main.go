@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	leetcode "github.com/jbltx/go-training/graphql-gen/examples/leetcode-client"
@@ -60,10 +62,22 @@ func main() {
 	flag.StringVar(&jwt, "jwt", "", "JSON Web Token")
 	flag.Parse()
 
+	// delete submission entries in the README
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
+	readme, err := ioutil.ReadFile(path.Join(cwd, "README.md"))
+	if err != nil {
+		panic(err)
+	}
+	readmeStr := string(readme)
+
+	separator1 := "**Submission List**"
+	separator2 := "---"
+	idx1 := strings.Index(readmeStr, separator1)
+	idx2 := strings.Index(readmeStr, separator2)
+	newReadmeStr := readmeStr[:idx1+len(separator1)] + "\n"
 
 	// configure GraphQL client
 	gql := leetcode.NewGraphQLClient()
@@ -131,7 +145,8 @@ func main() {
 						}
 
 						// write submission code in a go file
-						codeFilepath := path.Join(dirPath, questionsMap[submission.Title].QuestionTitleSlug+".go")
+						filename := questionsMap[submission.Title].QuestionTitleSlug + ".go"
+						codeFilepath := path.Join(dirPath, filename)
 						f, err := os.Create(codeFilepath)
 						if err != nil {
 							panic(err)
@@ -140,6 +155,16 @@ func main() {
 						if err = f.Close(); err != nil {
 							panic(err)
 						}
+
+						// put an entry in the README
+						newReadmeStr += fmt.Sprintf(
+							"* %s-%s [Submission](/%s/%s.go) - [Leetcode Link](https://leetcode.com/problems/%s)\n",
+							questionsMap[submission.Title].QuestionFrontendID,
+							questionsMap[submission.Title].QuestionTitle,
+							dirName,
+							filename,
+							questionsMap[submission.Title].QuestionTitleSlug,
+						)
 
 						// store the submission in the map
 						filteredSubmissions[submission.Title] = submission
@@ -152,6 +177,11 @@ func main() {
 		submissionsVars["offset"] = strconv.Itoa(submissionsOffset)
 
 		hasNext = submissionList.HasNext
+	}
+
+	newReadmeStr += readmeStr[idx2:]
+	if err = ioutil.WriteFile(path.Join(cwd, "README.md"), []byte(newReadmeStr), 755); err != nil {
+		panic(err)
 	}
 
 }
