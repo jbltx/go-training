@@ -158,7 +158,7 @@ func main() {
 
 						// put an entry in the README
 						newReadmeStr += fmt.Sprintf(
-							"* %s-%s [Submission](/%s/%s.go) - [Leetcode Link](https://leetcode.com/problems/%s)\n",
+							"* %s-%s [Submission](/%s/%s) - [Leetcode Link](https://leetcode.com/problems/%s)\n",
 							questionsMap[submission.Title].QuestionFrontendID,
 							questionsMap[submission.Title].QuestionTitle,
 							dirName,
