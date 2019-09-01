@@ -58,6 +58,11 @@ func main() {
 	flag.StringVar(&jwt, "jwt", "", "JSON Web Token")
 	flag.Parse()
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
 	// configure GraphQL client
 	gql := leetcode.NewGraphQLClient()
 	cookie := &http.Cookie{
@@ -113,9 +118,9 @@ func main() {
 					if _, ok := filteredSubmissions[submission.Title]; !ok {
 
 						dirName := fmt.Sprintf("%s-%s", questionsMap[submission.Title].QuestionFrontendID, questionsMap[submission.Title].QuestionTitleSlug)
-						dirPath := path.Join(".", dirName)
-						info, _ := os.Stat(dirPath)
-						if !info.IsDir() {
+						dirPath := path.Join(cwd, dirName)
+						info, err := os.Stat(dirPath)
+						if err != nil || !info.IsDir() {
 							os.Mkdir(dirPath, 755)
 						}
 
